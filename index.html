@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0B0F17">
+<title>StuTea — Study Tracker</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0F17;
+    --surface-1:#111726;
+    --surface-2:#172033;
+    --surface-3:#1E293B;
+    --primary:#8B5CF6;
+    --primary-light:#A78BFA;
+    --primary-dark:#7C3AED;
+    --secondary:#10B981;
+    --secondary-dark:#059669;
+    --tertiary:#6366F1;
+    --mint:#4EDEA3;
+    --border-subtle:rgba(148,163,184,0.08);
+    --border-default:rgba(148,163,184,0.16);
+    --border-active:rgba(139,92,246,0.4);
+    --text-hi:#F8FAFC;
+    --text-med:#94A3B8;
+    --text-low:#475569;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--text-hi);
+    font-family:'Plus Jakarta Sans',system-ui,sans-serif;
+    font-size:16px;
+    -webkit-font-smoothing:antialiased;
+    overscroll-behavior-y:none;
+  }
+  h1,h2,h3,.display,.brand-title,.cal-month,.page-title,.modal-title{font-family:'Sora',sans-serif;}
+  #app{max-width:600px; margin:0 auto; min-height:100vh; position:relative; padding-bottom:100px;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  .screen{display:none; padding:18px 20px 8px;}
+  .screen.active{display:block; animation:fadeIn .25s ease;}
+  @keyframes fadeIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+  /* Header */
+  .topbar{display:flex; align-items:flex-end; justify-content:space-between; padding:36px 0 34px;}
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand-title{font-weight:800; font-size:60px; line-height:1; letter-spacing:-.02em;}
+  .brand-sub{font-size:12px; color:var(--text-med); font-family:'JetBrains Mono',monospace; letter-spacing:.04em; margin-top:4px;}
+  .streak-pill{display:flex; align-items:center; gap:6px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.28); color:var(--secondary); font-size:14px; font-weight:700; padding:8px 14px; border-radius:999px; font-family:'JetBrains Mono',monospace;}
+
+  /* Cards */
+  .card{background:var(--surface-1); border:1px solid var(--border-subtle); border-radius:20px; padding:22px; box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.04);}
+  .card + .card{margin-top:14px;}
+
+  /* Calendar */
+  .cal-head{display:flex; align-items:center; justify-content:space-between; margin:20px 0 14px;}
+  .cal-month{font-size:30px; font-weight:800; letter-spacing:-.02em;}
+  .cal-nav{display:flex; align-items:center; gap:8px;}
+  .iconbtn{width:42px; height:42px; border-radius:12px; background:var(--surface-2); border:1px solid var(--border-default); color:var(--text-hi); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:18px;}
+  .today-btn{background:var(--surface-2); border:1px solid var(--border-default); color:var(--text-hi); font-size:13px; font-weight:700; padding:10px 16px; border-radius:12px; cursor:pointer; font-family:'JetBrains Mono',monospace;}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:5px; text-align:center;}
+  .cal-dow{font-size:12px; color:var(--text-med); padding:8px 0; font-family:'JetBrains Mono',monospace; font-weight:600;}
+  .cal-day{position:relative; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; border-radius:13px; font-size:16px; font-weight:600; cursor:pointer; color:var(--text-hi);}
+  .cal-day.muted{color:var(--text-low); cursor:default;}
+  .cal-day.today{border:1.5px solid var(--border-active);}
+  .cal-day.selected{background:linear-gradient(135deg,#8B5CF6,#7C3AED); box-shadow:0 0 28px -4px rgba(139,92,246,0.55); font-weight:800; color:#fff;}
+  .cal-dot{position:absolute; bottom:7px; width:6px; height:6px; border-radius:50%;}
+  .legend{display:flex; align-items:center; gap:18px; font-size:12px; color:var(--text-med); margin-top:14px; font-family:'JetBrains Mono',monospace;}
+  .legend span{display:inline-flex; align-items:center; gap:6px;}
+  .dot{width:7px; height:7px; border-radius:50%; display:inline-block;}
+
+  .summary-row{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;}
+  .summary-time{font-size:36px; font-weight:800; letter-spacing:-.02em; font-family:'Sora',sans-serif;}
+  .progress-bar{height:8px; border-radius:999px; background:var(--surface-2); overflow:hidden; margin-top:12px;}
+  .progress-fill{height:100%; background:linear-gradient(90deg,#8B5CF6,#4EDEA3); border-radius:999px; transition:width .4s ease;}
+  .btn-primary{background:linear-gradient(135deg,#8B5CF6,#7C3AED); border:1px solid rgba(255,255,255,0.25); color:#fff; font-weight:700; border-radius:15px; padding:17px; text-align:center; cursor:pointer; font-size:17px; font-family:'Sora',sans-serif;}
+  .btn-secondary{background:var(--surface-2); border:1px solid var(--border-default); color:var(--text-hi); font-weight:700; border-radius:15px; padding:15px; text-align:center; cursor:pointer; font-size:15px;}
+  .btn-ghost{background:transparent; color:var(--text-med); border:1px dashed var(--border-default); border-radius:15px; padding:15px; text-align:center; cursor:pointer; font-weight:700;}
+
+  /* Subject list */
+  .page-head{display:flex; align-items:center; gap:12px; margin:16px 0 4px;}
+  .back-btn{width:42px; height:42px; border-radius:12px; background:var(--surface-2); border:1px solid var(--border-default); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; font-size:18px;}
+  .page-title{font-size:26px; font-weight:800; letter-spacing:-.02em;}
+  .subject-card{display:flex; align-items:center; gap:16px; cursor:pointer;}
+  .ring-sm{position:relative; width:64px; height:64px; flex-shrink:0;}
+  .ring-sm svg{transform:rotate(-90deg);}
+  .ring-sm .pct{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; font-family:'JetBrains Mono',monospace;}
+  .subj-meta{flex:1; min-width:0;}
+  .subj-name{font-weight:700; font-size:18px; display:flex; align-items:center; gap:9px; font-family:'Sora',sans-serif;}
+  .subj-sub{font-size:13px; color:var(--text-med); margin-top:4px; font-family:'JetBrains Mono',monospace;}
+  .chev{color:var(--text-low); flex-shrink:0; font-size:20px;}
+  .empty-state{text-align:center; padding:48px 18px; color:var(--text-med); font-size:15px;}
+
+  /* Tracker */
+  .ring-lg-wrap{display:flex; flex-direction:column; align-items:center; padding:14px 0 6px;}
+  .ring-lg{position:relative; width:240px; height:240px;}
+  .ring-lg svg{transform:rotate(-90deg); width:100%; height:100%; filter:drop-shadow(0 0 22px rgba(139,92,246,.28));}
+  .ring-lg .center{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+  .ring-pct{font-size:50px; font-weight:800; font-family:'JetBrains Mono',monospace; letter-spacing:-.02em;}
+  .ring-label{font-size:12px; color:var(--text-med); letter-spacing:.12em; margin-top:4px; font-weight:600;}
+  .goal-pill{margin-top:12px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.28); color:var(--mint); font-size:14px; font-weight:700; padding:8px 16px; border-radius:999px; font-family:'JetBrains Mono',monospace;}
+  .goal-note{font-size:13px; color:var(--text-med); margin-top:10px;}
+
+  .analog-clock-wrap{display:flex; justify-content:center; margin:4px 0 10px;}
+  .analog-clock-wrap svg line{transition:transform .25s cubic-bezier(.4,2,.6,1);}
+  .timer-display{display:flex; justify-content:center; align-items:baseline; gap:4px; font-family:'JetBrains Mono',monospace; font-weight:800; font-size:54px; letter-spacing:-.02em; margin:8px 0 2px;}
+  .timer-units{display:flex; justify-content:center; gap:44px; font-size:11px; color:var(--text-med); letter-spacing:.18em; margin-bottom:20px; font-weight:600;}
+  .stopwatch-controls{display:flex; align-items:center; justify-content:center; gap:16px;}
+  .sw-btn-main{background:linear-gradient(135deg,#8B5CF6,#7C3AED); border:1px solid rgba(255,255,255,0.25); color:#fff; font-weight:700; border-radius:999px; padding:17px 36px; display:flex; align-items:center; gap:9px; cursor:pointer; font-size:17px; box-shadow:0 4px 18px rgba(139,92,246,0.38); font-family:'Sora',sans-serif;}
+  .sw-btn-main.running{background:var(--surface-2); color:var(--text-hi); box-shadow:none;}
+  .sw-btn-round{width:56px; height:56px; border-radius:50%; background:var(--surface-2); border:1px solid var(--border-default); color:var(--text-hi); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:20px;}
+
+  .donut-wrap{display:flex; flex-direction:column; align-items:center; padding:6px 0 2px;}
+  .donut-ring{position:relative; width:190px; height:190px; border-radius:50%; transition:background 0.4s ease;}
+  .donut-hole{position:absolute; inset:26px; border-radius:50%; background:var(--surface-1); display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.04);}
+  .donut-total{font-size:26px; font-weight:800; font-family:'JetBrains Mono',monospace; letter-spacing:-.02em;}
+  .donut-label{font-size:11px; color:var(--text-med); letter-spacing:.1em; margin-top:3px; font-weight:600; text-align:center;}
+  .legend-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px 16px; width:100%; margin-top:20px;}
+  .legend-row{display:flex; align-items:center; gap:9px;}
+  .legend-dot{width:10px; height:10px; border-radius:50%; flex-shrink:0;}
+  .legend-txt{flex:1; min-width:0; font-size:13px; color:var(--text-med); font-weight:600;}
+  .legend-val{font-size:13px; font-family:'JetBrains Mono',monospace; font-weight:700; color:var(--text-hi);}
+
+  .section-head{display:flex; align-items:center; justify-content:space-between; margin:22px 2px 12px;}
+  .section-title{font-size:15px; font-weight:800; color:var(--text-med); letter-spacing:.03em; font-family:'Sora',sans-serif;}
+  .sect-row{display:flex; align-items:center; gap:14px; padding:17px 18px;}
+  .sect-dot{width:12px; height:12px; border-radius:50%; flex-shrink:0;}
+  .sect-name{font-weight:700; font-size:17px; display:flex; align-items:center; gap:10px; font-family:'Sora',sans-serif;}
+  .badge{font-size:11px; font-weight:700; color:var(--text-med); background:rgba(148,163,184,0.08); border:1px solid var(--border-default); padding:3px 9px; border-radius:999px; font-family:'JetBrains Mono',monospace;}
+  .sect-time{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:16px; color:var(--text-hi);}
+  .sect-actions{display:flex; align-items:center; gap:10px; margin-left:8px;}
+  .plusbtn{width:32px; height:32px; border-radius:10px; background:var(--surface-2); border:1px solid var(--border-default); color:var(--primary-light); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:18px; font-weight:700;}
+  .xbtn{width:28px; height:28px; border-radius:9px; background:transparent; color:var(--text-low); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:16px;}
+
+  /* Bottom nav */
+  .bottomnav{position:fixed; bottom:0; left:0; right:0; max-width:600px; margin:0 auto; background:rgba(17,23,38,0.92); backdrop-filter:blur(14px); border-top:1px solid var(--border-subtle); display:flex; justify-content:space-around; padding:12px 0 calc(12px + env(safe-area-inset-bottom));}
+  .navitem{display:flex; flex-direction:column; align-items:center; gap:4px; color:var(--text-low); cursor:pointer; font-size:11px; font-family:'JetBrains Mono',monospace; font-weight:600;}
+  .navitem.active{color:var(--primary-light);}
+  .navitem .navcircle{width:46px; height:46px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:20px;}
+  .navitem.active .navcircle{background:rgba(139,92,246,0.14);}
+
+  /* Modal */
+  .modal-backdrop{position:fixed; inset:0; background:rgba(5,7,12,0.68); backdrop-filter:blur(3px); display:none; align-items:flex-end; justify-content:center; z-index:50;}
+  .modal-backdrop.active{display:flex;}
+  .modal-sheet{width:100%; max-width:600px; background:var(--surface-1); border:1px solid var(--border-default); border-top-left-radius:26px; border-top-right-radius:26px; padding:24px 22px calc(28px + env(safe-area-inset-bottom)); animation:slideUp .28s ease; max-height:88vh; overflow-y:auto;}
+  @keyframes slideUp{from{transform:translateY(30px); opacity:.4;} to{transform:translateY(0); opacity:1;}}
+  .modal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;}
+  .modal-title{font-size:20px; font-weight:800;}
+  .field-label{font-size:12px; color:var(--text-med); text-transform:uppercase; letter-spacing:.09em; margin:16px 0 8px; font-family:'JetBrains Mono',monospace; font-weight:600;}
+  .text-input{width:100%; background:var(--bg); border:1px solid var(--border-default); color:var(--text-hi); border-radius:13px; padding:15px 16px; font-size:17px; font-family:'Plus Jakarta Sans',sans-serif;}
+  .text-input:focus{outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(139,92,246,0.2);}
+  .stepper{display:flex; align-items:center; justify-content:space-between; background:var(--bg); border:1px solid var(--border-default); border-radius:13px; padding:10px 12px;}
+  .stepper button{width:40px; height:40px; border-radius:11px; background:var(--surface-2); border:1px solid var(--border-default); color:var(--text-hi); font-size:20px; cursor:pointer;}
+  .stepper .val{font-family:'JetBrains Mono',monospace; font-weight:800; font-size:17px;}
+  .color-row{display:grid; grid-template-columns:repeat(4,1fr); gap:10px;}
+  .color-chip{border:1px solid var(--border-default); background:var(--bg); border-radius:13px; padding:12px 4px; display:flex; flex-direction:column; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:var(--text-med); font-weight:700;}
+  .color-chip.selected{border-color:var(--primary); background:rgba(139,92,246,0.1); color:var(--text-hi);}
+  .swatch{width:24px; height:24px; border-radius:50%;}
+  .modal-actions{display:flex; gap:12px; margin-top:22px;}
+
+  .stat-mini{display:flex; justify-content:space-between; padding:8px 0; font-size:15px;}
+  .stat-mini .k{color:var(--text-med);}
+  .stat-mini .v{font-family:'JetBrains Mono',monospace; font-weight:800; font-size:15px;}
+
+  .stats-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:18px;}
+  .stat-card{background:var(--surface-1); border:1px solid var(--border-subtle); border-radius:18px; padding:16px; box-shadow:inset 0 1px 0 0 rgba(255,255,255,0.04);}
+  .stat-icon{width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; margin-bottom:12px;}
+  .stat-val{font-size:21px; font-weight:800; font-family:'JetBrains Mono',monospace; letter-spacing:-.02em;}
+  .stat-lbl{font-size:11px; color:var(--text-med); margin-top:4px; letter-spacing:.05em; font-family:'JetBrains Mono',monospace; font-weight:600;}
+  .subj-stat-row{margin-bottom:16px;}
+  .subj-stat-row:last-child{margin-bottom:0;}
+  .subj-stat-top{display:flex; align-items:center; justify-content:space-between; margin-bottom:7px;}
+  .subj-stat-name{display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px;}
+  .subj-stat-val{font-family:'JetBrains Mono',monospace; font-weight:700; color:var(--text-med); font-size:12px;}
+  .subj-stat-bar{height:8px; border-radius:999px; background:var(--surface-2); overflow:hidden;}
+  .subj-stat-fill{height:100%; border-radius:999px;}
+
+  a{color:inherit;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ CALENDAR SCREEN ============ -->
+  <section id="screen-calendar" class="screen active">
+    <div class="topbar">
+      <div class="brand">
+        <div>
+          <div class="brand-title">StuTea</div>
+          <div class="brand-sub">STUDY TRACKER</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cal-head">
+      <div class="cal-month" id="calMonthLabel">—</div>
+      <div class="cal-nav">
+        <button class="today-btn" id="btnToday">Today</button>
+        <div class="iconbtn" id="btnPrevMonth"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></div>
+        <div class="iconbtn" id="btnNextMonth"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+    </div>
+
+    <div class="cal-grid" id="calDowRow"></div>
+    <div class="cal-grid" id="calDaysGrid" style="margin-top:5px;"></div>
+
+    <div class="legend">
+      <span><i class="dot" style="background:var(--primary-light)"></i>Logged</span>
+      <span><i class="dot" style="background:var(--secondary)"></i>Goal met</span>
+    </div>
+
+    <div class="card" style="margin-top:20px;">
+      <div class="summary-row">
+        <div>
+          <div style="font-size:12px; color:var(--text-med); font-family:'JetBrains Mono',monospace; letter-spacing:.06em; font-weight:600;" id="selDateLabel">TODAY</div>
+          <div class="summary-time" id="selDateTotal">0h 0m</div>
+        </div>
+        <div id="selDatePct" class="goal-pill">0% of goal</div>
+      </div>
+      <div style="font-size:13px; color:var(--text-med);" id="selDateSubjCount">0 subjects studied</div>
+      <div class="progress-bar"><div class="progress-fill" id="selDateBar" style="width:0%"></div></div>
+    </div>
+
+    <div class="btn-primary" style="margin-top:16px;" id="btnOpenDay">Open This Day →</div>
+  </section>
+
+  <!-- ============ SUBJECT LIST SCREEN ============ -->
+  <section id="screen-list" class="screen">
+    <div class="topbar">
+      <div class="brand">
+        <div>
+          <div class="brand-title">StuTea</div>
+          <div class="brand-sub">STUDY TRACKER</div>
+        </div>
+      </div>
+    </div>
+    <div class="page-head">
+      <div class="back-btn" id="btnListBack"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div>
+      <div>
+        <div class="page-title" id="listDateTitle">—</div>
+        <div style="font-size:13px; color:var(--text-med);" id="listDateSub">Daily study block</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <div class="summary-row">
+        <div class="summary-time" id="listTotal">0h 0m</div>
+        <div id="listPct" class="goal-pill">0%</div>
+      </div>
+      <div style="font-size:13px; color:var(--text-med);" id="listTargetLine">Target: 0h 0m</div>
+      <div class="progress-bar"><div class="progress-fill" id="listBar" style="width:0%"></div></div>
+    </div>
+
+    <div id="subjectCards" style="margin-top:16px;"></div>
+
+    <div class="btn-primary" id="btnAddSubject" style="margin-top:16px;">+ Add Subject</div>
+    <div style="font-size:12px; color:var(--text-low); text-align:center; margin-top:12px;">Subjects you add appear on every day — you're tracking the same subject list throughout, day by day.</div>
+  </section>
+
+  <!-- ============ TRACKER SCREEN ============ -->
+  <section id="screen-tracker" class="screen">
+    <div class="topbar">
+      <div class="brand">
+        <div>
+          <div class="brand-title">StuTea</div>
+          <div class="brand-sub">STUDY TRACKER</div>
+        </div>
+      </div>
+    </div>
+    <div class="page-head">
+      <div class="back-btn" id="btnTrackerBack"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div>
+      <div style="flex:1;">
+        <div class="page-title" id="trackName" style="display:flex; align-items:center; gap:10px;">—</div>
+        <div style="font-size:12px; color:var(--text-med); font-family:'JetBrains Mono',monospace; font-weight:600;" id="trackTargetLabel">TARGET: —</div>
+      </div>
+      <div class="iconbtn" id="btnEditSubject"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>
+      <div class="iconbtn" id="btnDeleteSubject" style="margin-left:10px; color:#ffb4ab;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 012-2h2a2 2 0 012 2v2"/></svg></div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <div class="ring-lg-wrap">
+        <div class="ring-lg">
+          <svg viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="var(--surface-2)" stroke-width="10"/>
+            <circle id="trackRingFg" cx="60" cy="60" r="52" fill="none" stroke="url(#gradRing)" stroke-width="10" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="326.7"/>
+            <defs>
+              <linearGradient id="gradRing" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#8B5CF6"/>
+                <stop offset="100%" stop-color="#A78BFA"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="center">
+            <div class="ring-pct" id="trackPct">0%</div>
+            <div class="ring-label">COMPLETED</div>
+          </div>
+        </div>
+        <div class="goal-pill" id="trackProgLine" style="margin-top:16px;">0m of 0m</div>
+        <div class="goal-note" id="trackRemain">—</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px; text-align:center;">
+      <div class="analog-clock-wrap">
+        <svg id="analogClock" width="120" height="120" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="58" fill="none" stroke="var(--border-default)" stroke-width="1.5"/>
+          <line id="clockMinHand" x1="60" y1="60" x2="60" y2="20" stroke="var(--text-hi)" stroke-width="2.5" stroke-linecap="round"/>
+          <line id="clockSecHand" x1="60" y1="60" x2="60" y2="14" stroke="var(--primary-light)" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="60" cy="60" r="3" fill="var(--primary-light)"/>
+        </svg>
+      </div>
+      <div class="timer-display" id="swDisplay">00:00:00</div>
+      <div class="timer-units"><span>HRS</span><span>MIN</span><span>SEC</span></div>
+      <div class="stopwatch-controls">
+        <div class="sw-btn-round" id="btnSwReset"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg></div>
+        <div class="sw-btn-main" id="btnSwToggle"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg><span>Start Focus</span></div>
+        <div class="sw-btn-round" id="btnSwLog"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+      <div style="font-size:12px; color:var(--text-low); margin-top:12px;">Timer adds directly to this subject's total progress</div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <div class="section-title" style="margin-bottom:2px;">TODAY'S ACTIVITY</div>
+      <div class="donut-wrap">
+        <div class="donut-ring" id="donutRing">
+          <div class="donut-hole">
+            <div class="donut-total" id="donutTotal">0m</div>
+            <div class="donut-label">LOGGED TODAY</div>
+          </div>
+        </div>
+        <div class="legend-grid" id="donutLegend"></div>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <div class="section-title">FOCUS SUBSECTIONS</div>
+      <div class="section-title" id="sectCount">0 buckets</div>
+    </div>
+    <div id="sectionsList"></div>
+  </section>
+
+  <!-- ============ STATS SCREEN ============ -->
+  <section id="screen-stats" class="screen">
+    <div class="topbar">
+      <div class="brand">
+        <div><div class="brand-title">StuTea</div><div class="brand-sub">STUDY TRACKER</div></div>
+      </div>
+    </div>
+    <div class="page-head"><div class="page-title">Stats</div></div>
+
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="goal-note" id="statBestDay" style="text-align:center; margin-top:10px;"></div>
+
+    <div class="card" style="margin-top:18px;">
+      <div class="section-head" style="margin:0 0 14px;">
+        <div class="section-title">LAST 7 DAYS</div>
+        <div class="section-title" id="statWeekBarsTotal">0h 0m</div>
+      </div>
+      <div id="statBars"></div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <div class="section-head" style="margin:0 0 14px;">
+        <div class="section-title">BY SUBJECT</div>
+        <div class="section-title">ALL TIME</div>
+      </div>
+      <div id="statSubjectBars"></div>
+    </div>
+  </section>
+
+  <!-- Bottom Nav -->
+  <div class="bottomnav">
+    <div class="navitem active" data-nav="calendar"><div class="navcircle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>Calendar</div>
+    <div class="navitem" data-nav="stats"><div class="navcircle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>Stats</div>
+  </div>
+</div>
+
+<!-- Add / Edit Subject Modal -->
+<div class="modal-backdrop" id="modalSubject">
+  <div class="modal-sheet">
+    <div class="modal-head">
+      <div class="modal-title" id="subjModalTitle">Add New Subject</div>
+      <div class="iconbtn" id="btnCloseSubjModal"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+    </div>
+    <div class="field-label">Subject Name</div>
+    <input class="text-input" id="inpSubjName" placeholder="e.g. Physics">
+    <div class="field-label">Daily Target Time</div>
+    <div class="stepper">
+      <button id="stepTargetMinus">−</button>
+      <div class="val"><span id="targetValLabel">1 hr 0 mins</span></div>
+      <button id="stepTargetPlus">+</button>
+    </div>
+    <div class="field-label">Color Tag</div>
+    <div class="color-row" id="colorRow"></div>
+    <div class="modal-actions">
+      <div class="btn-primary" style="flex:1;" id="btnSaveSubject">Save Subject</div>
+    </div>
+    <div style="font-size:12px; color:var(--text-low); text-align:center; margin-top:14px;">This subject will appear on every day, not just today.</div>
+  </div>
+</div>
+
+<!-- Log Time Modal (for sections) -->
+<div class="modal-backdrop" id="modalLogTime">
+  <div class="modal-sheet">
+    <div class="modal-head">
+      <div class="modal-title" id="logTimeTitle">Log time</div>
+      <div class="iconbtn" id="btnCloseLogModal"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>
+    </div>
+    <div class="field-label">Add minutes</div>
+    <div style="display:flex; gap:10px; margin-bottom:12px;">
+      <div class="btn-secondary" style="flex:1;" data-mins="5">+5m</div>
+      <div class="btn-secondary" style="flex:1;" data-mins="15">+15m</div>
+      <div class="btn-secondary" style="flex:1;" data-mins="30">+30m</div>
+      <div class="btn-secondary" style="flex:1;" data-mins="60">+1h</div>
+    </div>
+    <div class="field-label">Or set exact time</div>
+    <div class="stepper">
+      <button id="logTimeMinus">−</button>
+      <div class="val"><span id="logTimeVal">0 mins</span></div>
+      <button id="logTimePlus">+</button>
+    </div>
+    <div class="modal-actions">
+      <div class="btn-primary" style="flex:1;" id="btnConfirmLogTime">Save</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===================== STATE & PERSISTENCE ===================== */
+const STORAGE_KEY = 'chronos_data_v2';
+const COLORS = [
+  {name:'Violet', hex:'#8B5CF6'},
+  {name:'Emerald', hex:'#10B981'},
+  {name:'Indigo', hex:'#6366F1'},
+  {name:'Mint', hex:'#4EDEA3'},
+];
+const DOW = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const SECTION_META = {
+  reading: {label:'Reading', badge:'Core', core:true},
+  writing: {label:'Writing', badge:'Core', core:true},
+  listening:{label:'Listening', badge:'Optional', core:false},
+  speaking: {label:'Speaking', badge:'Optional', core:false},
+};
+const SECTION_COLORS = {
+  reading:'#8B5CF6', writing:'#6366F1', listening:'#4EDEA3', speaking:'#10B981'
+};
+const ICONS = {
+  flame: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z"/></svg>',
+  flameSmall: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z"/></svg>',
+  calendar: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="3"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+  barChart: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>',
+  timer: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="2" x2="14" y2="2"/><line x1="12" y1="14" x2="15" y2="11"/><circle cx="12" cy="14" r="8"/></svg>',
+  trendingUp: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>',
+  checkCircleBare: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+  checkCircle: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px; margin-right:5px; color:var(--secondary);"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+  play: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>',
+  pause: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>',
+};
+
+function blankData(){ return { subjects: [], logs: {} }; }
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return blankData();
+    const parsed = JSON.parse(raw);
+    if(!parsed.subjects) parsed.subjects = [];
+    if(!parsed.logs) parsed.logs = {};
+    return parsed;
+  }catch(e){ return blankData(); }
+}
+function saveData(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(DATA));
+}
+let DATA = loadData(); // { subjects:[{id,name,color,target,removedSections:[]}], logs:{ 'YYYY-MM-DD': { subjId: {studied, sections:{reading,writing,listening,speaking}} } } }
+
+function fmtKey(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function todayKey(){ return fmtKey(new Date()); }
+
+function blankLogEntry(){ return {studied:0, sections:{reading:0,writing:0,listening:0,speaking:0}}; }
+function getLog(dateKey, subjId){
+  const day = DATA.logs[dateKey];
+  if(day && day[subjId]) return day[subjId];
+  return blankLogEntry();
+}
+function ensureLog(dateKey, subjId){
+  if(!DATA.logs[dateKey]) DATA.logs[dateKey] = {};
+  if(!DATA.logs[dateKey][subjId]) DATA.logs[dateKey][subjId] = blankLogEntry();
+  return DATA.logs[dateKey][subjId];
+}
+function dayTotals(key){
+  if(DATA.subjects.length===0) return {studied:0, target:0, count:0, allMet:false};
+  let studied=0, target=0, met=0, studiedCount=0;
+  DATA.subjects.forEach(s=>{
+    const log = getLog(key, s.id);
+    studied += log.studied;
+    target += s.target;
+    if(log.studied>0) studiedCount++;
+    if(s.target>0 && log.studied>=s.target) met++;
+  });
+  return {studied, target, count:studiedCount, allMet: met===DATA.subjects.length && DATA.subjects.length>0};
+}
+function fmtHM(mins){
+  mins = Math.max(0, Math.round(mins));
+  const h = Math.floor(mins/60), m = mins%60;
+  return h>0 ? `${h}h ${m}m` : `${m}m`;
+}
+function uid(){ return Math.random().toString(36).slice(2,10); }
+
+/* ===================== NAV STATE ===================== */
+let calCursor = new Date();
+let selectedDateKey = todayKey();
+let activeSubjectId = null;
+let stopwatchInterval = null;
+let stopwatchRunning = false;
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function setNav(name){
+  document.querySelectorAll('.navitem').forEach(n=>n.classList.toggle('active', n.dataset.nav===name));
+}
+
+/* ===================== HISTORY / BACK NAVIGATION ===================== */
+function closeAllModals(){
+  document.getElementById('modalSubject').classList.remove('active');
+  document.getElementById('modalLogTime').classList.remove('active');
+}
+function openModalUI(modal){
+  if(modal==='subject') document.getElementById('modalSubject').classList.add('active');
+  if(modal==='logtime') document.getElementById('modalLogTime').classList.add('active');
+}
+function renderScreenData(screen){
+  if(screen==='calendar'){ renderCalendar(); renderDaySummary(); }
+  else if(screen==='list'){ renderSubjectList(); }
+  else if(screen==='tracker'){ renderTracker(); }
+  else if(screen==='stats'){ renderStats(); }
+}
+let appState = {screen:'calendar', nav:'calendar', modal:null};
+function goTo(next, opts){
+  const push = !opts || opts.push!==false;
+  appState = {
+    screen: next.screen!==undefined ? next.screen : appState.screen,
+    nav: next.nav!==undefined ? next.nav : appState.nav,
+    modal: next.modal!==undefined ? next.modal : null
+  };
+  if(appState.modal){
+    showScreen('screen-'+appState.screen);
+    setNav(appState.nav);
+    openModalUI(appState.modal);
+  } else {
+    closeAllModals();
+    stopStopwatchInterval();
+    renderScreenData(appState.screen);
+    showScreen('screen-'+appState.screen);
+    setNav(appState.nav);
+  }
+  if(push){
+    history.pushState(appState, '', '#'+appState.screen+(appState.modal?('-'+appState.modal):''));
+  }
+}
+window.addEventListener('popstate', (e)=>{
+  const state = e.state || {screen:'calendar', nav:'calendar', modal:null};
+  goTo(state, {push:false});
+});
+history.replaceState(appState, '', '#calendar');
+
+/* ===================== CALENDAR RENDER ===================== */
+const monthLabel = d => d.toLocaleDateString('en-US',{month:'long', year:'numeric'});
+
+function renderDowRow(){
+  const row = document.getElementById('calDowRow');
+  row.innerHTML = DOW.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+}
+
+function computeStreak(){
+  let streak = 0;
+  let cur = new Date();
+  while(true){
+    const key = fmtKey(cur);
+    const t = dayTotals(key);
+    if(t.studied > 0){ streak++; cur.setDate(cur.getDate()-1); }
+    else break;
+  }
+  return streak;
+}
+
+function renderCalendar(){
+  renderDowRow();
+  document.getElementById('calMonthLabel').textContent = monthLabel(calCursor);
+  const grid = document.getElementById('calDaysGrid');
+  grid.innerHTML = '';
+
+  const year = calCursor.getFullYear(), month = calCursor.getMonth();
+  const firstOfMonth = new Date(year, month, 1);
+  let startOffset = (firstOfMonth.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+  const cells = [];
+  for(let i=startOffset-1; i>=0; i--){
+    cells.push({num: daysInPrevMonth-i, muted:true, date:new Date(year, month-1, daysInPrevMonth-i)});
+  }
+  for(let d=1; d<=daysInMonth; d++){
+    cells.push({num:d, muted:false, date:new Date(year, month, d)});
+  }
+  while(cells.length % 7 !== 0){
+    const nextIdx = cells.length - (startOffset+daysInMonth);
+    cells.push({num: nextIdx+1, muted:true, date:new Date(year, month+1, nextIdx+1)});
+  }
+
+  const tKey = todayKey();
+  cells.forEach(c=>{
+    const key = fmtKey(c.date);
+    const div = document.createElement('div');
+    div.className = 'cal-day' + (c.muted?' muted':'') + (key===tKey?' today':'') + (key===selectedDateKey?' selected':'');
+    div.textContent = c.num;
+    if(!c.muted){
+      const totals = dayTotals(key);
+      if(totals.studied>0){
+        const dot = document.createElement('div');
+        dot.className = 'cal-dot';
+        dot.style.background = totals.allMet ? 'var(--secondary)' : 'var(--primary-light)';
+        div.appendChild(dot);
+      }
+      div.addEventListener('click', ()=>{ selectedDateKey = key; renderCalendar(); renderDaySummary(); });
+    }
+    grid.appendChild(div);
+  });
+}
+
+
+function renderDaySummary(){
+  const totals = dayTotals(selectedDateKey);
+  const d = new Date(selectedDateKey+'T00:00:00');
+  const label = d.toLocaleDateString('en-US',{weekday:'long', month:'short', day:'numeric'});
+  document.getElementById('selDateLabel').textContent = selectedDateKey===todayKey() ? `TODAY · ${label.toUpperCase()}` : label.toUpperCase();
+  document.getElementById('selDateTotal').textContent = fmtHM(totals.studied);
+  document.getElementById('selDateSubjCount').textContent = `${totals.count} of ${DATA.subjects.length} subject${DATA.subjects.length===1?'':'s'} studied`;
+  const pct = totals.target>0 ? Math.min(100, Math.round(totals.studied/totals.target*100)) : 0;
+  document.getElementById('selDatePct').textContent = `${pct}% of goal`;
+  document.getElementById('selDateBar').style.width = pct+'%';
+}
+
+/* ===================== SUBJECT LIST RENDER ===================== */
+function openListForSelectedDate(){
+  goTo({screen:'list', nav:'calendar', modal:null});
+}
+
+function renderSubjectList(){
+  const d = new Date(selectedDateKey+'T00:00:00');
+  document.getElementById('listDateTitle').textContent = d.toLocaleDateString('en-US',{weekday:'long', month:'long', day:'numeric'});
+  document.getElementById('listDateSub').textContent = selectedDateKey===todayKey() ? "Today's study block" : "Daily study block";
+
+  const totals = dayTotals(selectedDateKey);
+  document.getElementById('listTotal').textContent = fmtHM(totals.studied);
+  document.getElementById('listTargetLine').textContent = `Target: ${fmtHM(totals.target)}`;
+  const pct = totals.target>0 ? Math.min(100, Math.round(totals.studied/totals.target*100)) : 0;
+  document.getElementById('listPct').textContent = pct+'%';
+  document.getElementById('listBar').style.width = pct+'%';
+
+  const wrap = document.getElementById('subjectCards');
+  wrap.innerHTML = '';
+  if(DATA.subjects.length===0){
+    wrap.innerHTML = `<div class="card empty-state">No subjects yet.<br>Tap "Add Subject" to start — it'll show up on every day.</div>`;
+    return;
+  }
+  DATA.subjects.forEach(s=>{
+    const log = getLog(selectedDateKey, s.id);
+    const pctS = s.target>0 ? Math.min(100, Math.round(log.studied/s.target*100)) : 0;
+    const circumference = 2*Math.PI*24;
+    const offset = circumference * (1 - pctS/100);
+    const card = document.createElement('div');
+    card.className = 'card subject-card';
+    card.innerHTML = `
+      <div class="ring-sm">
+        <svg viewBox="0 0 56 56">
+          <circle cx="28" cy="28" r="24" fill="none" stroke="var(--surface-2)" stroke-width="6"/>
+          <circle cx="28" cy="28" r="24" fill="none" stroke="${s.color}" stroke-width="6" stroke-linecap="round"
+            stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
+        </svg>
+        <div class="pct">${pctS}%</div>
+      </div>
+      <div class="subj-meta">
+        <div class="subj-name"><span style="width:9px;height:9px;border-radius:50%;background:${s.color};display:inline-block;"></span>${s.name}</div>
+        <div class="subj-sub">${fmtHM(log.studied)} studied · Goal: ${fmtHM(s.target)}</div>
+      </div>
+      <div class="chev"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+    `;
+    card.addEventListener('click', ()=>{ activeSubjectId = s.id; openTracker(); });
+    wrap.appendChild(card);
+  });
+}
+
+/* ===================== ADD / EDIT SUBJECT MODAL ===================== */
+let modalTargetMins = 60;
+let modalSelectedColor = COLORS[0].hex;
+let editingSubjectId = null;
+
+function renderColorRow(){
+  const row = document.getElementById('colorRow');
+  row.innerHTML = '';
+  COLORS.forEach(c=>{
+    const chip = document.createElement('div');
+    chip.className = 'color-chip' + (c.hex===modalSelectedColor?' selected':'');
+    chip.innerHTML = `<span class="swatch" style="background:${c.hex}"></span>${c.name}`;
+    chip.addEventListener('click', ()=>{ modalSelectedColor = c.hex; renderColorRow(); });
+    row.appendChild(chip);
+  });
+}
+function updateTargetLabel(){
+  const h = Math.floor(modalTargetMins/60), m = modalTargetMins%60;
+  document.getElementById('targetValLabel').textContent = `${h} hr ${m} mins`;
+}
+function openAddSubjectModal(){
+  editingSubjectId = null;
+  document.getElementById('subjModalTitle').textContent = 'Add New Subject';
+  document.getElementById('inpSubjName').value = '';
+  modalTargetMins = 60;
+  modalSelectedColor = COLORS[0].hex;
+  updateTargetLabel(); renderColorRow();
+  goTo({modal:'subject'});
+}
+function openEditSubjectModal(subj){
+  editingSubjectId = subj.id;
+  document.getElementById('subjModalTitle').textContent = 'Edit Subject';
+  document.getElementById('inpSubjName').value = subj.name;
+  modalTargetMins = subj.target;
+  modalSelectedColor = subj.color;
+  updateTargetLabel(); renderColorRow();
+  goTo({modal:'subject'});
+}
+document.getElementById('btnCloseSubjModal').addEventListener('click', ()=>history.back());
+document.getElementById('stepTargetMinus').addEventListener('click', ()=>{ modalTargetMins = Math.max(5, modalTargetMins-5); updateTargetLabel(); });
+document.getElementById('stepTargetPlus').addEventListener('click', ()=>{ modalTargetMins += 5; updateTargetLabel(); });
+
+document.getElementById('btnSaveSubject').addEventListener('click', ()=>{
+  const name = document.getElementById('inpSubjName').value.trim();
+  if(!name){ document.getElementById('inpSubjName').focus(); return; }
+  if(editingSubjectId){
+    const s = DATA.subjects.find(x=>x.id===editingSubjectId);
+    s.name = name; s.target = modalTargetMins; s.color = modalSelectedColor;
+  } else {
+    DATA.subjects.push({
+      id: uid(), name, color: modalSelectedColor, target: modalTargetMins, removedSections: []
+    });
+  }
+  saveData();
+  history.back();
+});
+
+document.getElementById('btnAddSubject').addEventListener('click', openAddSubjectModal);
+
+/* ===================== TRACKER SCREEN ===================== */
+function getActiveSubject(){
+  return DATA.subjects.find(s=>s.id===activeSubjectId);
+}
+function getActiveLog(){
+  return ensureLog(selectedDateKey, activeSubjectId);
+}
+
+function openTracker(){
+  goTo({screen:'tracker', nav:'calendar', modal:null});
+}
+
+function renderTracker(){
+  const s = getActiveSubject();
+  if(!s) return;
+  const log = getActiveLog();
+  document.getElementById('trackName').innerHTML = `<span style="width:10px;height:10px;border-radius:50%;background:${s.color};display:inline-block;"></span>${s.name}`;
+  document.getElementById('trackTargetLabel').textContent = `TARGET: ${fmtHM(s.target)}`;
+
+  const pct = s.target>0 ? Math.min(100, Math.round(log.studied/s.target*100)) : 0;
+  document.getElementById('trackPct').textContent = pct+'%';
+  const circumference = 2*Math.PI*52;
+  document.getElementById('trackRingFg').setAttribute('stroke-dasharray', circumference);
+  document.getElementById('trackRingFg').setAttribute('stroke-dashoffset', circumference*(1-pct/100));
+  document.getElementById('trackProgLine').textContent = `${fmtHM(log.studied)} of ${fmtHM(s.target)}`;
+  const remain = s.target - log.studied;
+  document.getElementById('trackRemain').innerHTML = remain>0 ? `${fmtHM(remain)} remaining to daily goal` : `${ICONS.checkCircle}Daily goal reached`;
+
+  updateStopwatchDisplay(log);
+  renderSections(s, log);
+  renderActivityDonut(s, log);
+}
+
+function renderActivityDonut(s, log){
+  const activeKeys = Object.keys(SECTION_META).filter(k => !(s.removedSections||[]).includes(k));
+  const total = activeKeys.reduce((sum,k)=> sum + (log.sections[k]||0), 0);
+  const ring = document.getElementById('donutRing');
+  document.getElementById('donutTotal').textContent = fmtHM(total);
+
+  if(total === 0){
+    ring.style.background = 'var(--surface-2)';
+  } else {
+    let acc = 0;
+    const stops = [];
+    activeKeys.forEach(k=>{
+      const mins = log.sections[k]||0;
+      if(mins <= 0) return;
+      const start = acc/total*100;
+      acc += mins;
+      const end = acc/total*100;
+      stops.push(`${SECTION_COLORS[k]} ${start}% ${end}%`);
+    });
+    ring.style.background = `conic-gradient(${stops.join(', ')})`;
+  }
+
+  const legend = document.getElementById('donutLegend');
+  legend.innerHTML = '';
+  activeKeys.forEach(k=>{
+    const mins = log.sections[k]||0;
+    const pct = total>0 ? Math.round(mins/total*100) : 0;
+    const row = document.createElement('div');
+    row.className = 'legend-row';
+    row.innerHTML = `
+      <div class="legend-dot" style="background:${SECTION_COLORS[k]}"></div>
+      <div class="legend-txt">${SECTION_META[k].label}</div>
+      <div class="legend-val">${fmtHM(mins)}${total>0?` · ${pct}%`:''}</div>
+    `;
+    legend.appendChild(row);
+  });
+}
+
+function renderSections(s, log){
+  const list = document.getElementById('sectionsList');
+  list.innerHTML = '';
+  const keys = Object.keys(SECTION_META).filter(k => !(s.removedSections||[]).includes(k));
+  keys.forEach(k=>{
+    const meta = SECTION_META[k];
+    const mins = log.sections[k] || 0;
+    const card = document.createElement('div');
+    card.className = 'card sect-row';
+    card.innerHTML = `
+      <div class="sect-dot" style="background:${s.color};"></div>
+      <div style="flex:1;">
+        <div class="sect-name">${meta.label} <span class="badge">${meta.badge}</span></div>
+        <div style="font-size:12px; color:var(--text-low); margin-top:3px;">Tap + to log time</div>
+      </div>
+      <div class="sect-time">${fmtHM(mins)}</div>
+      <div class="sect-actions">
+        <div class="plusbtn" data-log="${k}">+</div>
+        ${meta.core ? '' : `<div class="xbtn" data-remove="${k}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>`}
+      </div>
+    `;
+    list.appendChild(card);
+  });
+  document.getElementById('sectCount').textContent = `${keys.length} bucket${keys.length===1?'':'s'}`;
+
+  list.querySelectorAll('[data-log]').forEach(el=>{
+    el.addEventListener('click', ()=> openLogModal(el.dataset.log));
+  });
+  list.querySelectorAll('[data-remove]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const subj = getActiveSubject();
+      if(!confirm(`Remove ${SECTION_META[el.dataset.remove].label} for "${subj.name}"? This applies to every day.`)) return;
+      subj.removedSections = subj.removedSections||[];
+      subj.removedSections.push(el.dataset.remove);
+      saveData(); renderTracker();
+    });
+  });
+}
+
+document.getElementById('btnTrackerBack').addEventListener('click', ()=>{ history.back(); });
+document.getElementById('btnListBack').addEventListener('click', ()=>{ history.back(); });
+document.getElementById('btnOpenDay').addEventListener('click', openListForSelectedDate);
+
+document.getElementById('btnEditSubject').addEventListener('click', ()=>{
+  const s = getActiveSubject();
+  if(s) openEditSubjectModal(s);
+});
+document.getElementById('btnDeleteSubject').addEventListener('click', ()=>{
+  const s = getActiveSubject();
+  if(!s) return;
+  if(confirm(`Delete "${s.name}" from every day? This can't be undone.`)){
+    DATA.subjects = DATA.subjects.filter(x=>x.id!==s.id);
+    Object.keys(DATA.logs).forEach(dateKey=>{ delete DATA.logs[dateKey][s.id]; });
+    saveData();
+    history.back();
+  }
+});
+
+/* ===================== STOPWATCH ===================== */
+function updateAnalogClock(totalSec){
+  const secAngle = (totalSec % 60) * 6;
+  const minAngle = (Math.floor(totalSec/60) % 60) * 6 + secAngle/60;
+  document.getElementById('clockSecHand').setAttribute('transform', `rotate(${secAngle} 60 60)`);
+  document.getElementById('clockMinHand').setAttribute('transform', `rotate(${minAngle} 60 60)`);
+}
+function updateStopwatchDisplay(log){
+  const totalSec = Math.round(log.studied*60);
+  const h = String(Math.floor(totalSec/3600)).padStart(2,'0');
+  const m = String(Math.floor((totalSec%3600)/60)).padStart(2,'0');
+  const sec = String(totalSec%60).padStart(2,'0');
+  document.getElementById('swDisplay').textContent = `${h}:${m}:${sec}`;
+  updateAnalogClock(totalSec);
+}
+function stopStopwatchInterval(){
+  if(stopwatchInterval){ clearInterval(stopwatchInterval); stopwatchInterval=null; }
+  stopwatchRunning = false;
+  document.getElementById('btnSwToggle').innerHTML = `${ICONS.play}<span>Start Focus</span>`;
+  document.getElementById('btnSwToggle').classList.remove('running');
+}
+document.getElementById('btnSwToggle').addEventListener('click', ()=>{
+  const s = getActiveSubject();
+  if(!s) return;
+  const log = getActiveLog();
+  if(!stopwatchRunning){
+    stopwatchRunning = true;
+    document.getElementById('btnSwToggle').innerHTML = `${ICONS.pause}<span>Pause</span>`;
+    document.getElementById('btnSwToggle').classList.add('running');
+    stopwatchInterval = setInterval(()=>{
+      log.studied += 1/60;
+      updateStopwatchDisplay(log);
+      const pct = s.target>0 ? Math.min(100, Math.round(log.studied/s.target*100)) : 0;
+      document.getElementById('trackPct').textContent = pct+'%';
+      const circumference = 2*Math.PI*52;
+      document.getElementById('trackRingFg').setAttribute('stroke-dashoffset', circumference*(1-pct/100));
+      document.getElementById('trackProgLine').textContent = `${fmtHM(log.studied)} of ${fmtHM(s.target)}`;
+      const remain = s.target - log.studied;
+      document.getElementById('trackRemain').innerHTML = remain>0 ? `${fmtHM(remain)} remaining to daily goal` : `${ICONS.checkCircle}Daily goal reached`;
+      if(Math.round(log.studied*60) % 10 === 0) saveData();
+    }, 1000);
+  } else {
+    stopStopwatchInterval();
+    saveData();
+    renderCalendar();
+  }
+});
+document.getElementById('btnSwReset').addEventListener('click', ()=>{
+  if(!confirm('Reset stopwatch progress for this subject (today) to 0?')) return;
+  const log = getActiveLog();
+  stopStopwatchInterval();
+  log.studied = 0;
+  saveData();
+  renderTracker();
+  renderCalendar();
+});
+document.getElementById('btnSwLog').addEventListener('click', ()=>{
+  stopStopwatchInterval();
+  saveData();
+  renderCalendar();
+  alert('Session saved.');
+});
+
+/* ===================== LOG TIME MODAL (sections) ===================== */
+let logSectionKey = null;
+let logMins = 15;
+function openLogModal(key){
+  logSectionKey = key;
+  logMins = 15;
+  document.getElementById('logTimeTitle').textContent = `Log time — ${SECTION_META[key].label}`;
+  document.getElementById('logTimeVal').textContent = `${logMins} mins`;
+  goTo({modal:'logtime'});
+}
+document.getElementById('btnCloseLogModal').addEventListener('click', ()=>history.back());
+document.getElementById('logTimeMinus').addEventListener('click', ()=>{ logMins = Math.max(5, logMins-5); document.getElementById('logTimeVal').textContent = `${logMins} mins`; });
+document.getElementById('logTimePlus').addEventListener('click', ()=>{ logMins += 5; document.getElementById('logTimeVal').textContent = `${logMins} mins`; });
+document.querySelectorAll('#modalLogTime [data-mins]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    applyLog(parseInt(btn.dataset.mins));
+    history.back();
+  });
+});
+document.getElementById('btnConfirmLogTime').addEventListener('click', ()=>{
+  applyLog(logMins);
+  history.back();
+});
+function applyLog(mins){
+  const log = getActiveLog();
+  log.sections[logSectionKey] = (log.sections[logSectionKey]||0) + mins;
+  saveData();
+  const s = getActiveSubject();
+  renderSections(s, log);
+  renderActivityDonut(s, log);
+}
+
+/* ===================== STATS SCREEN ===================== */
+function renderStats(){
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - ((now.getDay()+6)%7));
+  let weekTotal=0, monthTotal=0, activeDays=0, allTimeTotal=0;
+  let bestKey=null, bestMins=0;
+  const subjTotals = {};
+  Object.keys(DATA.logs).forEach(key=>{
+    const t = dayTotals(key);
+    if(t.studied<=0) return;
+    activeDays++;
+    allTimeTotal += t.studied;
+    if(t.studied > bestMins){ bestMins = t.studied; bestKey = key; }
+    const d = new Date(key+'T00:00:00');
+    if(d>=weekStart) weekTotal += t.studied;
+    if(d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth()) monthTotal += t.studied;
+    const dayLog = DATA.logs[key];
+    Object.keys(dayLog).forEach(subjId=>{
+      subjTotals[subjId] = (subjTotals[subjId]||0) + (dayLog[subjId].studied||0);
+    });
+  });
+  const streakDays = computeStreak();
+  const dailyAvg = activeDays>0 ? allTimeTotal/activeDays : 0;
+
+  const cards = [
+    {icon:ICONS.flame, bg:'rgba(245,158,11,0.14)', color:'#F59E0B', val:`${streakDays}d`, lbl:'CURRENT STREAK'},
+    {icon:ICONS.calendar, bg:'rgba(139,92,246,0.14)', color:'#A78BFA', val:fmtHM(weekTotal), lbl:'THIS WEEK'},
+    {icon:ICONS.barChart, bg:'rgba(99,102,241,0.14)', color:'#818CF8', val:fmtHM(monthTotal), lbl:'THIS MONTH'},
+    {icon:ICONS.timer, bg:'rgba(78,222,163,0.14)', color:'#4EDEA3', val:fmtHM(allTimeTotal), lbl:'ALL-TIME TOTAL'},
+    {icon:ICONS.checkCircleBare, bg:'rgba(16,185,129,0.14)', color:'#10B981', val:activeDays, lbl:'ACTIVE DAYS'},
+    {icon:ICONS.trendingUp, bg:'rgba(167,139,250,0.14)', color:'#A78BFA', val:fmtHM(dailyAvg), lbl:'DAILY AVERAGE'},
+  ];
+  document.getElementById('statsGrid').innerHTML = cards.map(c=>`
+    <div class="stat-card">
+      <div class="stat-icon" style="background:${c.bg}; color:${c.color};">${c.icon}</div>
+      <div class="stat-val">${c.val}</div>
+      <div class="stat-lbl">${c.lbl}</div>
+    </div>
+  `).join('');
+
+  const bestDayEl = document.getElementById('statBestDay');
+  if(bestKey){
+    const bd = new Date(bestKey+'T00:00:00');
+    const label = bd.toLocaleDateString('en-US',{weekday:'long', month:'short', day:'numeric'});
+    bestDayEl.innerHTML = `Best day: <strong style="color:var(--text-hi);">${label}</strong> · ${fmtHM(bestMins)}`;
+  } else {
+    bestDayEl.textContent = '';
+  }
+
+  const bars = document.getElementById('statBars');
+  bars.innerHTML = '';
+  let maxVal = 1;
+  const days = [];
+  for(let i=6;i>=0;i--){
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const t = dayTotals(fmtKey(d));
+    days.push({label: d.toLocaleDateString('en-US',{weekday:'short'}), mins: t.studied, isToday: i===0});
+    maxVal = Math.max(maxVal, t.studied);
+  }
+  document.getElementById('statWeekBarsTotal').textContent = fmtHM(days.reduce((sum,d)=>sum+d.mins,0));
+  days.forEach(day=>{
+    const row = document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:12px;margin-bottom:10px;';
+    row.innerHTML = `
+      <div style="width:42px;font-size:12px;color:${day.isToday?'var(--primary-light)':'var(--text-med)'};font-family:'JetBrains Mono',monospace;font-weight:${day.isToday?800:600};">${day.label}</div>
+      <div style="flex:1;background:var(--surface-2);border-radius:999px;height:12px;overflow:hidden;">
+        <div style="width:${Math.round(day.mins/maxVal*100)}%; height:100%; background:linear-gradient(90deg,#8B5CF6,#4EDEA3); border-radius:999px;"></div>
+      </div>
+      <div style="width:64px;text-align:right;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text-med);">${fmtHM(day.mins)}</div>
+    `;
+    bars.appendChild(row);
+  });
+
+  const subjBox = document.getElementById('statSubjectBars');
+  if(DATA.subjects.length===0 || Object.keys(subjTotals).length===0){
+    subjBox.innerHTML = `<div style="text-align:center; color:var(--text-med); font-size:13px; padding:8px 0;">No study time logged yet.</div>`;
+  } else {
+    const rows = DATA.subjects
+      .map(s=>({s, mins: subjTotals[s.id]||0}))
+      .filter(r=>r.mins>0)
+      .sort((a,b)=>b.mins-a.mins);
+    const maxSubj = Math.max(1, ...rows.map(r=>r.mins));
+    subjBox.innerHTML = rows.map(r=>`
+      <div class="subj-stat-row">
+        <div class="subj-stat-top">
+          <div class="subj-stat-name"><span style="width:9px;height:9px;border-radius:50%;background:${r.s.color};display:inline-block;"></span>${r.s.name}</div>
+          <div class="subj-stat-val">${fmtHM(r.mins)}</div>
+        </div>
+        <div class="subj-stat-bar"><div class="subj-stat-fill" style="width:${Math.round(r.mins/maxSubj*100)}%; background:${r.s.color};"></div></div>
+      </div>
+    `).join('');
+  }
+}
+
+/* ===================== SETTINGS (disabled for now) ===================== */
+
+/* ===================== NAV WIRING ===================== */
+document.querySelectorAll('.navitem').forEach(item=>{
+  item.addEventListener('click', ()=>{
+    const target = item.dataset.nav;
+    goTo({screen:target, nav:target, modal:null});
+  });
+});
+document.getElementById('btnToday').addEventListener('click', ()=>{ calCursor = new Date(); selectedDateKey = todayKey(); renderCalendar(); renderDaySummary(); });
+document.getElementById('btnPrevMonth').addEventListener('click', ()=>{ calCursor.setMonth(calCursor.getMonth()-1); renderCalendar(); });
+document.getElementById('btnNextMonth').addEventListener('click', ()=>{ calCursor.setMonth(calCursor.getMonth()+1); renderCalendar(); });
+
+/* ===================== INIT ===================== */
+renderCalendar();
+renderDaySummary();
+</script>
+</body>
+</html>
